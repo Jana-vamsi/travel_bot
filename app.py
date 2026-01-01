@@ -2,8 +2,11 @@ import streamlit as st
 from google import genai
 
 # ------------------- LOAD API KEY -------------------
-# Streamlit Cloud uses Secrets instead of .env
-api_key = st.secrets["GOOGLE_API_KEY"]
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+except Exception:
+    st.error("❌ GOOGLE_API_KEY not found in Streamlit Secrets. Add it in Settings → Secrets.")
+    st.stop()
 
 # Initialize Gemini Client
 client = genai.Client(api_key=api_key)
@@ -53,10 +56,11 @@ st.markdown("""
 st.markdown('<div class="main-title">✈️ TravelBot – Smart Travel Assistant</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Get help with booking, cancellations, refunds, policies & travel documents</div>', unsafe_allow_html=True)
 
+
 # ------------------- SIDEBAR -------------------
 with st.sidebar:
     st.header("📌 Quick Help")
-    
+
     if st.button("Booking Process"):
         st.session_state.auto_question = "Explain travel ticket booking process"
     if st.button("Cancellation Rules"):
@@ -72,6 +76,7 @@ with st.sidebar:
     st.markdown("🔐 **No transactions** | ❌ **No personal data**")
     st.markdown("Powered by **Google Gemini**")
 
+
 # ------------------- CHAT MEMORY -------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -79,19 +84,26 @@ if "messages" not in st.session_state:
         ("Bot", "👋 Hello! I'm **TravelBot**. Ask me about booking steps, cancellations, refunds, documents, or travel rules!")
     )
 
+if "auto_question" not in st.session_state:
+    st.session_state.auto_question = ""
+
+
 # ------------------- DISPLAY CHAT -------------------
 for role, msg in st.session_state.messages:
     with st.chat_message("user" if role == "You" else "assistant"):
         st.write(msg)
+
 
 # ------------------- CHAT INPUT -------------------
 auto_question = st.session_state.get("auto_question", "")
 user_input = st.chat_input("Type your question...") or auto_question
 st.session_state.auto_question = ""
 
+
 # ------------------- HANDLE REPLY -------------------
 if user_input:
     st.session_state.messages.append(("You", user_input))
+
     with st.chat_message("user"):
         st.write(user_input)
 
@@ -102,8 +114,8 @@ if user_input:
                     model="models/gemini-2.5-flash",
                     contents=[SYSTEM_PROMPT + "\nUser: " + user_input]
                 )
-
                 bot_reply = response.text
+
                 st.write(bot_reply)
                 st.session_state.messages.append(("Bot", bot_reply))
 
